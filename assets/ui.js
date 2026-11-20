@@ -53,6 +53,7 @@ export class UI {
    *     verifyNow: (key: string) => void,
    *     loadMoreRemote: () => void,
    *     retry: () => void,
+   *     toggleFetchAll: () => void,
    *   },
    * }} options
    */
@@ -124,6 +125,7 @@ export class UI {
       rateLine: byId('rate-line'),
       cacheLine: byId('cache-line'),
       refresh: byId('refresh-button'),
+      fetchAllButton: byId('fetch-all-button'),
       errorBanner: byId('error-banner'),
       errorTitle: byId('error-title'),
       errorBody: byId('error-body'),
@@ -252,6 +254,7 @@ export class UI {
     })
     this.els.loadMore?.addEventListener('click', () => this.loadMore())
     this.els.refresh?.addEventListener('click', () => this.actions.refresh())
+    this.els.fetchAllButton?.addEventListener('click', () => this.actions.toggleFetchAll())
     this.els.errorRetry?.addEventListener('click', () => this.actions.retry())
     this.els.progressToggle?.addEventListener('click', () => this.toggleProgress())
     this.els.langToggle?.addEventListener('click', () => this.toggleLanguage())
@@ -310,7 +313,12 @@ export class UI {
           this.loadMore()
           return
         }
-        if (this.remoteArmed && this.state.hasMoreRemote && !this.state.loading) {
+        if (
+          this.remoteArmed &&
+          this.state.hasMoreRemote &&
+          !this.state.loading &&
+          !this.state.fetchAll
+        ) {
           this.remoteArmed = false
           this.actions.loadMoreRemote()
         }
@@ -362,6 +370,7 @@ export class UI {
     const scrollY = preserveScroll ? window.scrollY : null
     this.renderStats()
     this.renderWindows()
+    this.renderFetchAllButton()
     this.renderFilters()
     this.renderActiveFilters()
     this.renderGrid({ reset })
@@ -472,6 +481,28 @@ export class UI {
     if (this.els.days) this.els.days.value = String(this.state.filters.days || 0)
     if (this.els.archived) this.els.archived.checked = Boolean(this.state.filters.archived)
     this.renderFilterCount()
+  }
+
+  renderFetchAllButton() {
+    const button = this.els.fetchAllButton
+    if (!button) return
+    const running = Boolean(this.state.fetchAll)
+    const noMoreKnown = !this.state.loading && !this.state.hasMoreRemote
+    const span = button.querySelector('span')
+    const label = running
+      ? t('actions.stopFetchAll')
+      : noMoreKnown
+        ? t('actions.allFetched')
+        : t('actions.fetchAll')
+    if (span) span.textContent = label
+    button.disabled = this.state.demo || (!running && (Boolean(this.state.loading) || noMoreKnown))
+    button.title = running
+      ? t('actions.stopFetchAll')
+      : noMoreKnown
+        ? t('actions.allFetched')
+        : t('actions.fetchAllTitle')
+    button.setAttribute('aria-pressed', String(running))
+    button.classList.toggle('is-running', running)
   }
 
   renderFilterCount() {
@@ -685,8 +716,9 @@ export class UI {
     const remoteMore = Boolean(this.state.hasMoreRemote)
     const more = localMore || remoteMore
     const searching = Boolean(this.state.loading)
+    const fetchingAll = Boolean(this.state.fetchAll)
     const verifying = (this.state.verification?.active || 0) > 0
-    if (this.els.loadMore) this.els.loadMore.hidden = !more || searching
+    if (this.els.loadMore) this.els.loadMore.hidden = !more || searching || fetchingAll
     if (this.els.loadingMore) {
       this.els.loadingMore.hidden = !(searching && !localMore) && !(verifying && results.length === 0)
     }
@@ -695,6 +727,7 @@ export class UI {
   }
 
   loadMore() {
+    if (this.state.fetchAll) return
     const results = this.state.results || []
     if ((this.state.renderedCount || 0) < results.length) {
       this.state.visibleCount = nextVisibleCount(
@@ -732,7 +765,13 @@ export class UI {
     } else if (this.state.loading) {
       const done = this.state.progress?.done || 0
       const total = this.state.progress?.total || 0
-      text = total ? t('status.fetching', { done, total }) : t('status.loading')
+      text = total
+        ? t(this.state.fetchAll ? 'status.fetchingAll' : 'status.fetching', { done, total })
+        : t('status.loading')
+    } else if (this.state.fetchAll && this.state.hasMoreRemote) {
+      const done = this.state.progress?.done || 0
+      const total = this.state.progress?.total || 0
+      text = t('status.fetchingAll', { done, total })
     } else if ((this.state.verification?.active || 0) > 0 && (this.state.results || []).length === 0) {
       text = t('status.verifying', {
         done: this.state.verification.attempted || 0,

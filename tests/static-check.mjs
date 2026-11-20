@@ -73,6 +73,7 @@ const requiredIds = [
   'card-template',
   'status-text',
   'error-banner',
+  'fetch-all-button',
 ]
 for (const id of requiredIds) check(`required element #${id}`, ids.includes(id))
 

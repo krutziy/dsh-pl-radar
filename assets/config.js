@@ -28,12 +28,12 @@ export const CONFIG = {
 
   /** GitHub Search API allows at most 100 per page and 1,000 results per query. */
   perPage: 100,
-  maxRepos: 2_500,
+  maxRepos: 3_000,
   /** Cards appended per infinite-scroll batch. */
   batchSize: 36,
   verify: {
     /** How many candidates are checked automatically in one load. */
-    limit: 1_000,
+    limit: 3_000,
     concurrency: 5,
     rawTimeoutMs: 2_500,
     cdnTimeoutMs: 4_500,

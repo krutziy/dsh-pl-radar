@@ -20,7 +20,7 @@ import {
   verificationPriority,
 } from './state.js'
 import { UI } from './ui.js'
-import { debounce, isAbortError } from './util.js'
+import { debounce, isAbortError, sleep } from './util.js'
 
 const TOKEN_KEY = 'dsh-radar-token'
 const LANG_KEY = 'dsh-radar-lang'
@@ -93,6 +93,7 @@ const state = {
   visibleCount: CONFIG.batchSize,
   renderedCount: 0,
   hasMoreRemote: false,
+  fetchAll: false,
   hasToken: Boolean(readSessionToken()),
 }
 
@@ -102,6 +103,8 @@ let client = null
 let verifier = null
 let activeController = null
 let pendingDetailKey = null
+let fetchAllRunning = false
+let fetchAllAbort = null
 
 function recomputeResults() {
   state.results = computeResults([...state.repositories.values()], state.filters, state.lang)
@@ -311,13 +314,18 @@ const actions = {
   },
 
   retry() {
-    if (state.loading) return
+    if (state.loading || state.fetchAll) return
     if (state.hasMoreRemote) loadNextTask()
     else refreshFromScratch()
   },
 
+  toggleFetchAll() {
+    if (state.fetchAll) stopFetchAll()
+    else startFetchAll()
+  },
+
   loadMoreRemote() {
-    if (!state.hasMoreRemote || state.loading) return
+    if (!state.hasMoreRemote || state.loading || state.fetchAll) return
     loadNextTask()
   },
 
@@ -340,6 +348,7 @@ const actions = {
   },
 
   async clearCache() {
+    stopFetchAll()
     if (activeController) activeController.abort()
     activeController = null
     state.loading = false
@@ -532,21 +541,22 @@ function updateRemoteAvailability() {
  * again only when the visitor reaches the bottom or clicks "load more".
  */
 async function loadNextTask() {
-  if (state.demo || !client || state.loading) return
+  if (state.demo || !client) return 'unavailable'
+  if (state.loading) return 'busy'
   if (state.repositories.size >= CONFIG.maxRepos) {
     state.hasMoreRemote = false
     state.meta.complete = true
     updateProgress()
     persistMeta()
     ui.renderAll({ preserveScroll: true })
-    return
+    return 'no-more'
   }
   const task = nextTask()
   if (!task) {
     updateRemoteAvailability()
     updateProgress()
     ui.renderAll({ preserveScroll: true })
-    return
+    return 'no-more'
   }
 
   const controller = new AbortController()
@@ -593,8 +603,11 @@ async function loadNextTask() {
     ui.renderStatus()
     ui.renderRate()
     scheduleDataUpdate()
+    return 'ok'
   } catch (error) {
     handleFetchError(error)
+    if (isAbortError(error)) return 'aborted'
+    return error instanceof GitHubError ? error.kind : 'error'
   } finally {
     if (activeController === controller) {
       activeController = null
@@ -611,6 +624,7 @@ async function loadNextTask() {
 /** Refresh drops only the page cursors: existing cards stay while page 1 reloads. */
 async function refreshFromScratch() {
   if (state.demo) return
+  stopFetchAll()
   if (activeController) activeController.abort()
   activeController = null
   state.loading = false
@@ -621,6 +635,68 @@ async function refreshFromScratch() {
   updateProgress()
   ui.renderAll({ preserveScroll: true })
   await loadNextTask()
+}
+
+/**
+ * Fetch every remaining search page in one run. This is the only path that
+ * intentionally continues in the background, and it can be stopped at any
+ * time. Rate limits are waited out instead of aborting the whole run.
+ */
+async function startFetchAll() {
+  if (state.demo || fetchAllRunning || state.loading || !state.hasMoreRemote) return
+  fetchAllRunning = true
+  state.fetchAll = true
+  state.error = null
+  fetchAllAbort = new AbortController()
+  const signal = fetchAllAbort.signal
+  ui.renderAll({ preserveScroll: true })
+  try {
+    while (fetchAllRunning && state.hasMoreRemote) {
+      const result = await loadNextTask()
+      if (!fetchAllRunning) break
+      if (result === 'ok') continue
+      if (result === 'no-more' || result === 'unavailable' || result === 'aborted') break
+      if (result === 'busy') {
+        try {
+          await sleep(250, signal)
+        } catch {
+          break
+        }
+        continue
+      }
+      if (result === 'rate-limit') {
+        const wait = Math.max(1_000, (state.error?.resetAt || Date.now() + 60_000) - Date.now() + 500)
+        ui.renderAll({ preserveScroll: true })
+        try {
+          await sleep(wait, signal)
+        } catch {
+          break
+        }
+        state.error = null
+        ui.renderAll({ preserveScroll: true })
+        continue
+      }
+      break
+    }
+  } finally {
+    fetchAllRunning = false
+    state.fetchAll = false
+    fetchAllAbort = null
+    if (ui) {
+      ui.remoteArmed = false
+      ui.renderAll({ preserveScroll: true })
+    }
+  }
+}
+
+function stopFetchAll() {
+  if (!fetchAllRunning && !state.fetchAll) return
+  fetchAllRunning = false
+  state.fetchAll = false
+  state.error = null
+  if (fetchAllAbort) fetchAllAbort.abort()
+  if (activeController) activeController.abort()
+  if (ui) ui.renderAll({ preserveScroll: true })
 }
 
 async function init() {
