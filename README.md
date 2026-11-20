@@ -2,6 +2,8 @@
 
 一个**纯静态、浏览器端实时抓取**的 GitHub topic 插件雷达。默认主题是 [`dsh-plugin`](https://github.com/topics/dsh-plugin)，它会把原本一行一个项目的 GitHub topic 页面重新编排成现代卡片网格，并用 `package.json` 的 `dsh.bundle` 清单过滤掉只打了 topic 的无关项目。
 
+![DSH Plugin Radar 桌面预览（?demo=1 演示数据）](docs/screenshot-dark.png)
+
 - 线上页面：<https://krutziy.github.io/dsh-pl-radar/>
 - 不需要后端、不需要数据库、不需要 GitHub Actions。
 - 不需要登录或 Token 也能用；数据直接由你的浏览器请求 GitHub。
