@@ -552,7 +552,9 @@ async function startRefresh({ force = false } = {}) {
           total: result.totalCount,
         }
         state.meta.windows = progress
-        state.meta.totalCount = result.totalCount ?? state.meta.totalCount
+        if (result.totalCount !== null && result.totalCount !== undefined) {
+          state.meta.totalCount = Math.max(Number(state.meta.totalCount) || 0, result.totalCount)
+        }
         state.meta.fetchedAt = Date.now()
         state.rate = result.rate
         updateProgress()

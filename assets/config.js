@@ -38,8 +38,8 @@ export const CONFIG = {
     /** How many candidates are checked automatically in one load. */
     limit: 1_000,
     concurrency: 5,
-    rawTimeoutMs: 4_000,
-    cdnTimeoutMs: 8_000,
+    rawTimeoutMs: 2_500,
+    cdnTimeoutMs: 4_500,
     maxBytes: 512 * 1_024,
   },
 
