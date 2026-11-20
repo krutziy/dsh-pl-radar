@@ -599,6 +599,7 @@ async function loadNextTask() {
     if (activeController === controller) {
       activeController = null
       state.loading = false
+      if (ui) ui.remoteArmed = false
       updateRemoteAvailability()
       updateProgress()
       persistMeta()
