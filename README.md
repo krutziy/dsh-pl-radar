@@ -16,16 +16,17 @@ GitHub 的 topic 页面是纵向大列表，一个项目占一整行；而且 `d
 1. **按多个顺序抓取**：Star 最多、最近更新、最近 90 天创建、最佳匹配，四个窗口交叉采样，去重后展示。
 2. **按清单过滤**：读取每个候选仓库根目录的 `package.json`，只有声明了 `dsh.bundle.patch` 且版本合法的仓库才标为“清单可安装”。
 3. **重新编排**：响应式卡片网格（桌面 4–5 列、平板 2–3 列、手机 1 列），滚动到底自动加载下一批，不再一行一个项目。
+4. **按需抓取**：首次只抓一页，后续只有滚动到底/点击“加载更多”才继续请求 GitHub；不会在后台把全部页面刷完。
 
 ## 使用
 
-打开 <https://krutziy.github.io/dsh-pl-radar/> 即可。第一次打开会按以下节奏工作：
+打开 <https://krutziy.github.io/dsh-pl-radar/> 即可。页面不会在后台把 26 页全部抓完：
 
-- 第 1 个搜索请求返回后先渲染第一页；
-- 随后依次抓其余窗口的第 1 页；
-- 后台逐页补齐，并同时校验 `package.json`；
-- 未登录时完整抓取大约 2–4 分钟；有 Token 时更快；
-- 数据缓存在 IndexedDB，默认 6 小时内秒开。
+- 第一次打开只请求 **Star 窗口第 1 页**，并开始校验 `package.json`，通常几秒内出现首批卡片；
+- 之后只有当你**滚动到底部**，或点击“加载更多”时，才请求下一个窗口/下一页；
+- 请求顺序是 page 1 的 Star → 最近更新 → 最近 90 天 → 最佳匹配，然后 page 2 的同一顺序，依此类推；
+- 每次只发一个搜索请求；未登录仍受 10 次/分钟限制，填 Token 后 30 次/分钟；
+- 数据缓存在 IndexedDB，再次打开直接秒开，不会自动续抓；页面上的“刷新”会重置进度并重抓第一页。
 
 ### 可选 Token
 
@@ -70,7 +71,7 @@ export const CONFIG = {
 
 - `topic`：任意 GitHub topic；
 - `windows`：抓取顺序、页数（每个查询最多 10 页 / 1,000 条）；
-- `maxRepos`、`batchSize`、`cacheTtlMs`；
+- `maxRepos`、`batchSize`；
 - `verify.limit` / `verify.concurrency`：自动校验数量和并发；
 - `categories`：分类 id、中文/英文标题、关键词。第一个命中的分类生效，`other` 放最后。
 
@@ -88,7 +89,7 @@ export const CONFIG = {
 
 - **只走 GitHub Search API**：GitHub topic 的 HTML 没有 CORS，浏览器无法直接读取，因此使用官方 Search API；`raw.githubusercontent.com` 和 `cdn.jsdelivr.net` 用于读取 `package.json`，两者都允许跨域。
 - **每个查询最多 1,000 条**：所以这不是全量 3.27 万条，而是多个窗口的 Top N 采样。页面会显示各窗口进度和覆盖数量。
-- **未登录限流**：搜索 10 次/分钟；配额耗尽时页面暂停并倒计时，缓存不会丢。填 Token 可提升到 30 次/分钟。
+- **未登录限流**：搜索 10 次/分钟；配额耗尽时显示错误和重试按钮，缓存不会丢。等待后点重试或继续滚动即可。填 Token 可提升到 30 次/分钟。
 - **只校验仓库根清单**：monorepo 的插件如果放在 `packages/` 子目录，会被标为“仅 topic 标签”；页面的详情里会提示去仓库确认。
 - **raw 网络回退**：`raw.githubusercontent.com` 不可达时自动尝试 jsDelivr；两者都失败会标记 `unreachable`，不会阻塞其他卡片。
 - **不是安全审计**：“清单可安装”只代表仓库声明了 `dsh.bundle.patch`，不保证代码安全。安装插件会以你的权限执行第三方代码。

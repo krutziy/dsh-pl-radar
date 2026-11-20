@@ -31,9 +31,6 @@ export const CONFIG = {
   maxRepos: 2_500,
   /** Cards appended per infinite-scroll batch. */
   batchSize: 36,
-  /** Cached data is considered fresh for this long. */
-  cacheTtlMs: 6 * 60 * 60 * 1_000,
-
   verify: {
     /** How many candidates are checked automatically in one load. */
     limit: 1_000,

@@ -487,3 +487,24 @@ export function normalizeTopicValue(topic) {
   const value = String(topic || '').trim().toLowerCase()
   return /^[a-z0-9][a-z0-9-]{0,99}$/.test(value) ? value : null
 }
+
+/**
+ * The next search page to request, in round-robin order: page 1 of every
+ * window, then page 2 of every window, and so on. Returns null when every
+ * configured page has been fetched.
+ *
+ * @param {Array<{ id: string, pages: number }>} windows
+ * @param {Record<string, { page?: number } | undefined>} progress
+ * @param {number} [pageLimit]
+ */
+export function nextFetchTask(windows, progress, pageLimit = 10) {
+  for (let page = 1; page <= pageLimit; page += 1) {
+    for (const windowConfig of windows) {
+      const pages = Math.min(pageLimit, Math.max(1, Number(windowConfig.pages) || 1))
+      if (page > pages) continue
+      const current = Number(progress?.[windowConfig.id]?.page) || 0
+      if (current < page) return { windowConfig, page, pages }
+    }
+  }
+  return null
+}

@@ -51,6 +51,8 @@ export class UI {
    *     clearCache: () => void,
    *     checkNpm: (key: string) => void,
    *     verifyNow: (key: string) => void,
+   *     loadMoreRemote: () => void,
+   *     retry: () => void,
    *   },
    * }} options
    */
@@ -65,6 +67,8 @@ export class UI {
     this.toastTimer = null
     this.countdownTimer = null
     this.filterSignature = ''
+    this.remoteArmed = false
+    this.lastScrollY = 0
     this.searchDebounced = debounce((value) => {
       this.actions.setFilter('q', value)
     }, 160)
@@ -248,7 +252,7 @@ export class UI {
     })
     this.els.loadMore?.addEventListener('click', () => this.loadMore())
     this.els.refresh?.addEventListener('click', () => this.actions.refresh())
-    this.els.errorRetry?.addEventListener('click', () => this.actions.refresh())
+    this.els.errorRetry?.addEventListener('click', () => this.actions.retry())
     this.els.progressToggle?.addEventListener('click', () => this.toggleProgress())
     this.els.langToggle?.addEventListener('click', () => this.toggleLanguage())
     this.els.themeToggle?.addEventListener('click', () => this.toggleTheme())
@@ -269,6 +273,19 @@ export class UI {
     })
     window.addEventListener('hashchange', () => this.handleLocation())
     window.addEventListener('popstate', () => this.handleLocation())
+    this.lastScrollY = window.scrollY
+    window.addEventListener(
+      'scroll',
+      () => {
+        const current = window.scrollY
+        if (Math.abs(current - this.lastScrollY) < 4) return
+        this.lastScrollY = current
+        if (current + window.innerHeight >= document.documentElement.scrollHeight - 500) {
+          this.remoteArmed = true
+        }
+      },
+      { passive: true },
+    )
     document.addEventListener('keydown', (event) => {
       const target = event.target
       const typing =
@@ -289,7 +306,14 @@ export class UI {
     this.observer = new IntersectionObserver(
       (entries) => {
         if (!entries.some((entry) => entry.isIntersecting)) return
-        if (this.state.renderedCount < this.state.results.length) this.loadMore()
+        if (this.state.renderedCount < this.state.results.length) {
+          this.loadMore()
+          return
+        }
+        if (this.remoteArmed && this.state.hasMoreRemote && !this.state.loading) {
+          this.remoteArmed = false
+          this.actions.loadMoreRemote()
+        }
       },
       { rootMargin: '600px 0px' },
     )
@@ -334,6 +358,7 @@ export class UI {
   }
 
   renderAll({ reset = false, preserveScroll = false } = {}) {
+    if (reset) this.remoteArmed = false
     const scrollY = preserveScroll ? window.scrollY : null
     this.renderStats()
     this.renderWindows()
@@ -656,28 +681,34 @@ export class UI {
   updateLoadMore() {
     const results = this.state.results || []
     const rendered = this.state.renderedCount || 0
-    const hasMore = rendered < results.length
-    if (this.els.loadMore) this.els.loadMore.hidden = !hasMore
-    const busy = this.state.loading || (this.state.verification?.active || 0) > 0
-    if (this.els.loadingMore) this.els.loadingMore.hidden = !(busy && !hasMore && results.length > 0)
-    if (this.els.endNote) this.els.endNote.hidden = hasMore || results.length === 0 || busy
-    if (this.els.sentinel) this.els.sentinel.hidden = results.length === 0
+    const localMore = rendered < results.length
+    const remoteMore = Boolean(this.state.hasMoreRemote)
+    const more = localMore || remoteMore
+    const searching = Boolean(this.state.loading)
+    const verifying = (this.state.verification?.active || 0) > 0
+    if (this.els.loadMore) this.els.loadMore.hidden = !more || searching
+    if (this.els.loadingMore) {
+      this.els.loadingMore.hidden = !(searching && !localMore) && !(verifying && results.length === 0)
+    }
+    if (this.els.endNote) this.els.endNote.hidden = more || results.length === 0 || searching || verifying
+    if (this.els.sentinel) this.els.sentinel.hidden = results.length === 0 && !remoteMore
   }
 
   loadMore() {
     const results = this.state.results || []
-    if ((this.state.renderedCount || 0) >= results.length) {
-      this.updateLoadMore()
+    if ((this.state.renderedCount || 0) < results.length) {
+      this.state.visibleCount = nextVisibleCount(
+        this.state.renderedCount || 0,
+        results.length,
+        this.config.batchSize || 36,
+      )
+      this.renderGrid({ reset: false })
+      this.renderStatus()
+      this.reobserveSentinel()
       return
     }
-    this.state.visibleCount = nextVisibleCount(
-      this.state.renderedCount || 0,
-      results.length,
-      this.config.batchSize || 36,
-    )
-    this.renderGrid({ reset: false })
-    this.renderStatus()
-    this.reobserveSentinel()
+    this.remoteArmed = false
+    this.actions.loadMoreRemote()
   }
 
   copyInstall(key) {
@@ -715,6 +746,7 @@ export class UI {
       text = total
         ? t('status.shown', { shown: formatCount(shown, this.state.lang), total: formatCount(total, this.state.lang) })
         : t('status.empty')
+      if (this.state.hasMoreRemote) text += ` · ${t('status.scrollMore')}`
       if (loaded && verified) text += ` · ${t('status.ready', { loaded: formatCount(loaded, this.state.lang), verified: formatCount(verified, this.state.lang) })}`
     }
     this.els.status.textContent = text

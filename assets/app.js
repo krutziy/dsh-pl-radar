@@ -11,11 +11,12 @@ import {
   applyManifest,
   computeResults,
   mergeSearchItems,
+  nextFetchTask,
   normalizeTopicValue,
   parseFilters,
+  nextVisibleCount,
   parseHash,
   serializeFilters,
-  summarize,
   verificationPriority,
 } from './state.js'
 import { UI } from './ui.js'
@@ -91,6 +92,7 @@ const state = {
   progress: { done: 0, total: totalWindowPages() },
   visibleCount: CONFIG.batchSize,
   renderedCount: 0,
+  hasMoreRemote: false,
   hasToken: Boolean(readSessionToken()),
 }
 
@@ -99,7 +101,6 @@ let db = null
 let client = null
 let verifier = null
 let activeController = null
-let resumeTimer = null
 let pendingDetailKey = null
 
 function recomputeResults() {
@@ -143,6 +144,11 @@ function writeUrl() {
 const scheduleDataUpdate = debounce(() => {
   recomputeResults()
   const nearTop = window.scrollY < 500
+  const atBottom =
+    window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 500
+  if (atBottom && state.results.length > state.renderedCount) {
+    state.visibleCount = nextVisibleCount(state.renderedCount, state.results.length, CONFIG.batchSize)
+  }
   ui.renderAll({ reset: nearTop, preserveScroll: !nearTop })
   if (pendingDetailKey && state.repositories.has(pendingDetailKey)) {
     const key = pendingDetailKey
@@ -301,7 +307,18 @@ const actions = {
   },
 
   refresh() {
-    startRefresh({ force: true })
+    refreshFromScratch()
+  },
+
+  retry() {
+    if (state.loading) return
+    if (state.hasMoreRemote) loadNextTask()
+    else refreshFromScratch()
+  },
+
+  loadMoreRemote() {
+    if (!state.hasMoreRemote || state.loading) return
+    loadNextTask()
   },
 
   saveToken(value) {
@@ -324,10 +341,8 @@ const actions = {
 
   async clearCache() {
     if (activeController) activeController.abort()
-    if (resumeTimer) {
-      clearTimeout(resumeTimer)
-      resumeTimer = null
-    }
+    activeController = null
+    state.loading = false
     try {
       await db?.clear()
     } catch {
@@ -345,10 +360,11 @@ const actions = {
     state.verification.limit = CONFIG.verify.limit
     state.visibleCount = CONFIG.batchSize
     state.renderedCount = 0
+    state.hasMoreRemote = true
     updateProgress()
     ui.els.settingsDialog?.close()
     ui.renderAll({ reset: true })
-    startRefresh({ force: true })
+    loadNextTask()
   },
 
   async checkNpm(key) {
@@ -388,8 +404,10 @@ async function loadCache() {
   db = await openDatabase(state.topic)
   const cached = await db.load()
   if (!Array.isArray(cached.repos) || cached.repos.length === 0) {
+    state.loading = false
     updateProgress()
-    return { repos: 0, fresh: false }
+    updateRemoteAvailability()
+    return { repos: 0 }
   }
   let attempted = 0
   for (const repo of cached.repos) {
@@ -419,14 +437,11 @@ async function loadCache() {
   state.verification.verified = [...state.repositories.values()].filter((repo) => repo.verified).length
   updateProgress()
   recomputeResults()
-  const age = state.meta.fetchedAt ? Date.now() - state.meta.fetchedAt : Number.POSITIVE_INFINITY
-  const fresh = state.meta.complete && age < CONFIG.cacheTtlMs
-  state.loading = !fresh
-  if (fresh) {
-    state.error = null
-  }
+  updateRemoteAvailability()
+  state.loading = false
+  state.error = null
   ui.renderAll({ reset: true })
-  return { repos: state.repositories.size, fresh }
+  return { repos: state.repositories.size }
 }
 
 async function loadDemo() {
@@ -458,6 +473,8 @@ async function loadDemo() {
     state.verification.verified = [...state.repositories.values()].filter((repo) => repo.verified).length
     state.loading = false
     state.error = null
+    state.hasMoreRemote = false
+    state.meta.complete = true
     updateProgress()
     recomputeResults()
     ui.renderAll({ reset: true })
@@ -468,25 +485,20 @@ async function loadDemo() {
   }
 }
 
-function handleFetchError(error, controller) {
+function handleFetchError(error) {
   if (isAbortError(error)) return
   if (state.demo) return
-  const now = Date.now()
   if (error instanceof GitHubError) {
     if (error.kind === 'auth') {
       state.error = { kind: 'auth', message: error.message }
       return
     }
     if (error.kind === 'rate-limit') {
-      state.error = { kind: 'rate-limit', resetAt: error.resetAt || now + 60_000, message: error.message }
-      if (resumeTimer) clearTimeout(resumeTimer)
-      const wait = Math.max(1_500, (error.resetAt || now + 60_000) - now + 1_000)
-      resumeTimer = setTimeout(() => {
-        resumeTimer = null
-        if (activeController === controller || !activeController) {
-          if (!state.demo) startRefresh({ force: false })
-        }
-      }, wait)
+      state.error = {
+        kind: 'rate-limit',
+        resetAt: error.resetAt || Date.now() + 60_000,
+        message: error.message,
+      }
       return
     }
     if (error.kind === 'network') {
@@ -499,90 +511,115 @@ function handleFetchError(error, controller) {
   state.error = { kind: 'network', message: error instanceof Error ? error.message : String(error) }
 }
 
-async function startRefresh({ force = false } = {}) {
-  if (state.demo || !client) return
-  if (activeController) activeController.abort()
-  if (resumeTimer) {
-    clearTimeout(resumeTimer)
-    resumeTimer = null
+/**
+ * The next page to ask GitHub for, in round-robin order: page 1 of every
+ * window, then page 2 of every window, and so on. Returns null when every
+ * configured page has been fetched.
+ */
+function nextTask() {
+  return nextFetchTask(CONFIG.windows, state.meta.windows, PAGE_LIMIT)
+}
+
+function updateRemoteAvailability() {
+  const task = nextTask()
+  state.hasMoreRemote = Boolean(task)
+  state.meta.complete = !task
+  return task
+}
+
+/**
+ * Fetch exactly one search page. It is called on first paint (one page) and
+ * again only when the visitor reaches the bottom or clicks "load more".
+ */
+async function loadNextTask() {
+  if (state.demo || !client || state.loading) return
+  if (state.repositories.size >= CONFIG.maxRepos) {
+    state.hasMoreRemote = false
+    state.meta.complete = true
+    updateProgress()
+    persistMeta()
+    ui.renderAll({ preserveScroll: true })
+    return
   }
+  const task = nextTask()
+  if (!task) {
+    updateRemoteAvailability()
+    updateProgress()
+    ui.renderAll({ preserveScroll: true })
+    return
+  }
+
   const controller = new AbortController()
   activeController = controller
   state.loading = true
   state.error = null
-
-  const progress = force ? {} : { ...(state.meta.windows || {}) }
-  if (force) {
-    state.meta.windows = {}
-    state.meta.complete = false
-  }
   updateProgress()
   ui.renderAll({ preserveScroll: true })
 
   try {
-    while (true) {
-      if (controller.signal.aborted) return
-      const pending = CONFIG.windows.filter(
-        (windowConfig) => (Number(progress[windowConfig.id]?.page) || 0) < Math.min(PAGE_LIMIT, windowConfig.pages),
-      )
-      if (pending.length === 0) break
-      if (state.repositories.size >= CONFIG.maxRepos) break
-
-      for (const windowConfig of pending) {
-        if (controller.signal.aborted) return
-        const pages = Math.min(PAGE_LIMIT, Math.max(1, windowConfig.pages))
-        const page = (Number(progress[windowConfig.id]?.page) || 0) + 1
-        const result = await client.search({
-          topic: state.topic,
-          window: windowConfig,
-          page,
-          perPage: CONFIG.perPage,
-          signal: controller.signal,
-        })
-        const { added, changed } = mergeSearchItems(
-          state.repositories,
-          result.items,
-          windowConfig.id,
-          CONFIG.categories,
-        )
-        progress[windowConfig.id] = {
-          page,
-          pages,
-          done: page >= pages,
-          total: result.totalCount,
-        }
-        state.meta.windows = progress
-        if (result.totalCount !== null && result.totalCount !== undefined) {
-          state.meta.totalCount = Math.max(Number(state.meta.totalCount) || 0, result.totalCount)
-        }
-        state.meta.fetchedAt = Date.now()
-        state.rate = result.rate
-        updateProgress()
-        verifier.add(added)
-        persistRepos([...added, ...changed])
-        persistMeta()
-        ui.renderWindows()
-        ui.renderStatus()
-        ui.renderRate()
-        scheduleDataUpdate()
-      }
+    const result = await client.search({
+      topic: state.topic,
+      window: task.windowConfig,
+      page: task.page,
+      perPage: CONFIG.perPage,
+      signal: controller.signal,
+    })
+    const { added, changed } = mergeSearchItems(
+      state.repositories,
+      result.items,
+      task.windowConfig.id,
+      CONFIG.categories,
+    )
+    state.meta.windows = {
+      ...state.meta.windows,
+      [task.windowConfig.id]: {
+        page: task.page,
+        pages: task.pages,
+        done: task.page >= task.pages,
+        total: result.totalCount,
+      },
     }
-    state.meta.complete = true
+    if (result.totalCount !== null && result.totalCount !== undefined) {
+      state.meta.totalCount = Math.max(Number(state.meta.totalCount) || 0, result.totalCount)
+    }
     state.meta.fetchedAt = Date.now()
+    state.rate = result.rate
     updateProgress()
+    updateRemoteAvailability()
+    verifier.add(added)
+    persistRepos([...added, ...changed])
     persistMeta()
-    const pendingRepos = [...state.repositories.values()].filter((repo) => repo.manifest?.status === 'pending')
-    verifier.add(pendingRepos)
+    ui.renderWindows()
+    ui.renderStatus()
+    ui.renderRate()
+    scheduleDataUpdate()
   } catch (error) {
-    handleFetchError(error, controller)
+    handleFetchError(error)
   } finally {
     if (activeController === controller) {
       activeController = null
       state.loading = false
+      updateRemoteAvailability()
+      updateProgress()
+      persistMeta()
       ui.renderAll({ preserveScroll: true })
-      if (state.meta.complete) persistMeta()
     }
   }
+}
+
+/** Refresh drops only the page cursors: existing cards stay while page 1 reloads. */
+async function refreshFromScratch() {
+  if (state.demo) return
+  if (activeController) activeController.abort()
+  activeController = null
+  state.loading = false
+  state.meta.windows = {}
+  state.meta.complete = false
+  state.hasMoreRemote = true
+  state.error = null
+  updateProgress()
+  ui.renderAll({ preserveScroll: true })
+  await loadNextTask()
 }
 
 async function init() {
@@ -611,14 +648,12 @@ async function init() {
 
   try {
     const cache = await loadCache()
-    if (!cache.fresh) {
-      startRefresh({ force: Boolean(state.meta.complete) })
+    if (state.repositories.size === 0) {
+      await loadNextTask()
     } else {
       state.loading = false
       state.error = null
       ui.renderAll({ reset: false })
-      const pending = [...state.repositories.values()].filter((repo) => repo.manifest?.status === 'pending')
-      verifier.add(pending)
     }
   } catch (error) {
     state.loading = false

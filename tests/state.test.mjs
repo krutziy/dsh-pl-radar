@@ -14,6 +14,7 @@ import {
   filterRepos,
   makeHash,
   mergeSearchItems,
+  nextFetchTask,
   nextVisibleCount,
   npmUrl,
   parseFilters,
@@ -228,4 +229,30 @@ test('categoryCounts includes every configured category', () => {
   assert.equal(counts.size, categories.length)
   assert.equal(counts.get('theme'), 1)
   assert.equal(counts.get('other'), 0)
+})
+
+test('nextFetchTask walks page 1 of every window before page 2', () => {
+  const windows = [
+    { id: 'stars', pages: 10 },
+    { id: 'updated', pages: 10 },
+    { id: 'new', pages: 3 },
+    { id: 'best', pages: 3 },
+  ]
+  const progress = {}
+  const first = nextFetchTask(windows, progress, 10)
+  assert.equal(first.windowConfig.id, 'stars')
+  assert.equal(first.page, 1)
+  progress.stars = { page: 1 }
+  assert.equal(nextFetchTask(windows, progress, 10).windowConfig.id, 'updated')
+  progress.updated = { page: 1 }
+  progress.new = { page: 1 }
+  progress.best = { page: 1 }
+  const second = nextFetchTask(windows, progress, 10)
+  assert.equal(second.windowConfig.id, 'stars')
+  assert.equal(second.page, 2)
+  progress.stars = { page: 10 }
+  progress.updated = { page: 10 }
+  progress.new = { page: 3 }
+  progress.best = { page: 3 }
+  assert.equal(nextFetchTask(windows, progress, 10), null)
 })
