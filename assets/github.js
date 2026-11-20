@@ -135,7 +135,8 @@ export class GitHubClient {
   constructor(options = {}) {
     this.getToken = options.getToken || (() => '')
     this.onRate = options.onRate || (() => {})
-    this.fetchImpl = options.fetchImpl || fetch
+    const fetchImpl = options.fetchImpl || globalThis.fetch
+    this.fetchImpl = fetchImpl.bind(globalThis)
     this.sleepImpl = options.sleepImpl || sleep
     /** @type {number} */
     this.lastRequestAt = 0
@@ -195,7 +196,7 @@ export class GitHubClient {
       })
     } catch (error) {
       if (error && typeof error === 'object' && 'name' in error && error.name === 'AbortError') throw error
-      throw new GitHubError('network', 'Could not reach api.github.com', { payload: error })
+      throw new GitHubError('network', `Could not reach api.github.com: ${error?.message || String(error)}`, { payload: error })
     }
 
     this.lastRequestAt = Date.now()
