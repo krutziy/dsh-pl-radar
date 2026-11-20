@@ -1,6 +1,6 @@
 /** Pure repository normalization, filtering, sorting and scoring. */
 
-import { daysSince, isObject, normalizeSearch, parseDate, safeAvatarUrl, safeHttpUrl, uniqueStrings } from './util.js'
+import { daysSince, isObject, normalizeSearch, parseDate, safeAvatarUrl, safeHttpUrl, uniqueStrings } from './util.js?v=20261120-2'
 
 export const DEFAULT_FILTERS = Object.freeze({
   q: '',

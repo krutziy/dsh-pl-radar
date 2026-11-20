@@ -1147,6 +1147,11 @@ progress.window-progress::-moz-progress-bar {
   border-radius: 8px;
 }
 
+.card-github:hover {
+  text-decoration: none;
+  color: var(--accent);
+}
+
 .card-actions .icon-button svg {
   width: 16px;
   height: 16px;

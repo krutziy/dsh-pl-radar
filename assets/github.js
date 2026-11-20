@@ -1,6 +1,6 @@
 /** GitHub Search API client with a browser-friendly rate limiter. */
 
-import { sleep } from './util.js'
+import { sleep } from './util.js?v=20261120-2'
 
 const SEARCH_BASE = 'https://api.github.com/search/repositories'
 const API_VERSION = '2022-11-28'

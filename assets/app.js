@@ -1,10 +1,10 @@
 /** Application bootstrap: cache, incremental fetch, manifest verification. */
 
-import { CONFIG } from './config.js'
-import { detectLanguage, setLanguage, t } from './i18n.js'
-import { GitHubClient, GitHubError } from './github.js'
-import { fetchManifest } from './manifest.js'
-import { openDatabase } from './db.js'
+import { CONFIG } from './config.js?v=20261120-2'
+import { detectLanguage, setLanguage, t } from './i18n.js?v=20261120-2'
+import { GitHubClient, GitHubError } from './github.js?v=20261120-2'
+import { fetchManifest } from './manifest.js?v=20261120-2'
+import { openDatabase } from './db.js?v=20261120-2'
 import {
   DEFAULT_FILTERS,
   SORT_VALUES,
@@ -18,9 +18,9 @@ import {
   parseHash,
   serializeFilters,
   verificationPriority,
-} from './state.js'
-import { UI } from './ui.js'
-import { debounce, isAbortError, sleep } from './util.js'
+} from './state.js?v=20261120-2'
+import { UI } from './ui.js?v=20261120-2'
+import { debounce, isAbortError, sleep } from './util.js?v=20261120-2'
 
 const TOKEN_KEY = 'dsh-radar-token'
 const LANG_KEY = 'dsh-radar-lang'

@@ -1,6 +1,6 @@
 /** Read and validate a repository's root package.json. No GitHub API needed. */
 
-import { isObject, safeHttpUrl } from './util.js'
+import { isObject, safeHttpUrl } from './util.js?v=20261120-2'
 
 const PACKAGE_NAME = /^(?:@[a-z0-9][a-z0-9._~-]*\/)?[a-z0-9][a-z0-9._~-]*$/
 const PACKAGE_NAME_MAX = 214

@@ -113,6 +113,7 @@ export const STRINGS = {
     'badge.webui': '含 Web UI',
 
     'card.noDescription': '这个仓库没有填写描述。',
+    'card.github': '在 GitHub 打开',
     'card.stars': 'Star',
     'card.updated': '更新',
     'card.install': '安装',
@@ -312,6 +313,7 @@ export const STRINGS = {
     'badge.webui': 'Web UI',
 
     'card.noDescription': 'This repository has no description.',
+    'card.github': 'Open on GitHub',
     'card.stars': 'Stars',
     'card.updated': 'Updated',
     'card.install': 'Install',

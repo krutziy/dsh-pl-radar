@@ -45,9 +45,9 @@ check('no inline <script> blocks', !/<script(?![^>]*\bsrc=)[^>]*>/i.test(html))
 check('no inline style attributes in index.html', !/\sstyle="/i.test(html))
 check('lang is set on the html element', /<html[^>]*\blang=/.test(html))
 
-const localRefs = [...html.matchAll(/(?:href|src)="(\.\/[^"#?]+)"/g)].map((match) => match[1])
+const localRefs = [...html.matchAll(/(?:href|src)="(\.\/[^"#]+)"/g)].map((match) => match[1])
 for (const ref of new Set(localRefs)) {
-  const relative = ref.replace(/^\.\//, '')
+  const relative = ref.replace(/^\.\//, '').split('?')[0]
   check(`local asset exists: ${relative}`, exists(relative))
 }
 

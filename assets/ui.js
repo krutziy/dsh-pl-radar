@@ -1,6 +1,6 @@
 /** DOM rendering: card grid, infinite scroll, filters, dialogs. */
 
-import { getLanguage, localized, setLanguage as setI18nLanguage, t } from './i18n.js'
+import { getLanguage, localized, setLanguage as setI18nLanguage, t } from './i18n.js?v=20261120-2'
 import {
   buildGitInstallCommand,
   buildPinnedInstallCommand,
@@ -14,7 +14,7 @@ import {
   nextVisibleCount,
   npmUrl,
   summarize,
-} from './state.js'
+} from './state.js?v=20261120-2'
 import {
   avatarTone,
   copyText,
@@ -27,7 +27,7 @@ import {
   formatRelative,
   initials,
   setText,
-} from './util.js'
+} from './util.js?v=20261120-2'
 
 const ICON_STAR = '★'
 const ICON_UPDATED = '↻'
@@ -201,7 +201,9 @@ export class UI {
   applyStaticI18n() {
     for (const element of document.querySelectorAll('[data-i18n]')) {
       const key = element.getAttribute('data-i18n')
-      if (key) element.textContent = t(key)
+      if (!key) continue
+      const translated = t(key)
+      if (translated !== key) element.textContent = translated
     }
     for (const element of document.querySelectorAll('[data-i18n-placeholder]')) {
       const key = element.getAttribute('data-i18n-placeholder')
@@ -489,18 +491,23 @@ export class UI {
     const running = Boolean(this.state.fetchAll)
     const noMoreKnown = !this.state.loading && !this.state.hasMoreRemote
     const span = button.querySelector('span')
+    const zh = this.state.lang === 'zh'
+    const translate = (key, fallback) => {
+      const value = t(key)
+      return value === key ? fallback : value
+    }
     const label = running
-      ? t('actions.stopFetchAll')
+      ? translate('actions.stopFetchAll', zh ? '停止抓取' : 'Stop fetching')
       : noMoreKnown
-        ? t('actions.allFetched')
-        : t('actions.fetchAll')
+        ? translate('actions.allFetched', zh ? '已全部抓取' : 'All fetched')
+        : translate('actions.fetchAll', zh ? '全部抓取' : 'Fetch all')
     if (span) span.textContent = label
     button.disabled = this.state.demo || (!running && (Boolean(this.state.loading) || noMoreKnown))
     button.title = running
-      ? t('actions.stopFetchAll')
+      ? label
       : noMoreKnown
-        ? t('actions.allFetched')
-        : t('actions.fetchAllTitle')
+        ? translate('actions.allFetched', zh ? '已全部抓取' : 'All fetched')
+        : translate('actions.fetchAllTitle', zh ? '抓取所有剩余页面' : 'Fetch every remaining search page')
     button.setAttribute('aria-pressed', String(running))
     button.classList.toggle('is-running', running)
   }
@@ -655,6 +662,12 @@ export class UI {
     if (meta) {
       if (repo.archived) meta.append(createEl('span', 'meta-item meta-warn', t('badge.archived')))
       if (repo.manifest?.webUi) meta.append(createEl('span', 'meta-item meta-good', t('badge.webui')))
+    }
+    const github = article.querySelector('[data-github]')
+    if (github) {
+      github.href = repo.url
+      github.title = t('card.github')
+      github.setAttribute('aria-label', `${t('card.github')}: ${repo.fullName}`)
     }
     const copyButton = article.querySelector('[data-action="copy"]')
     if (copyButton) {
