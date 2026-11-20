@@ -35,6 +35,7 @@ export const STRINGS = {
 
     'filter.title': '筛选',
     'filter.verifiedOnly': '只看清单可安装',
+    'filter.showAll': '显示全部',
     'filter.category': '分类',
     'filter.language': '语言',
     'filter.license': '许可证',
@@ -227,6 +228,7 @@ export const STRINGS = {
 
     'filter.title': 'Filters',
     'filter.verifiedOnly': 'Installable only',
+    'filter.showAll': 'Showing all',
     'filter.category': 'Category',
     'filter.language': 'Language',
     'filter.license': 'License',

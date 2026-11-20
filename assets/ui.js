@@ -491,7 +491,7 @@ export class UI {
     if (this.state.filters.language !== 'all') add('language', 'all', this.state.filters.language)
     if (this.state.filters.license !== 'all') add('license', 'all', this.state.filters.license)
     if (Number(this.state.filters.days) > 0) add('days', '0', t('filter.days') + `: ${this.state.filters.days}d`)
-    if (!this.state.filters.verifiedOnly) add('verifiedOnly', true, t('filter.verifiedOnly'))
+    if (!this.state.filters.verifiedOnly) add('verifiedOnly', true, t('filter.showAll'))
     if (this.state.filters.archived) add('archived', false, t('filter.showArchived'))
     if (!chips.length) {
       this.els.activeFilters.replaceChildren()
