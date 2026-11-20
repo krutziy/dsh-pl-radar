@@ -1,0 +1,13 @@
+{
+  "name": "dsh-pl-radar",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Client-side GitHub topic radar for DSH plugins, hosted on GitHub Pages.",
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "check": "node tests/static-check.mjs",
+    "serve": "python3 -m http.server 8080"
+  },
+  "license": "MIT"
+}

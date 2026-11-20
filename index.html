@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <meta name="theme-color" content="#07131f">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: https://avatars.githubusercontent.com; connect-src 'self' https://api.github.com https://raw.githubusercontent.com https://cdn.jsdelivr.net https://registry.npmjs.org; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>DSH Plugin Radar · DSH 插件雷达</title>
+  <meta name="description" content="在浏览器里实时抓取 GitHub dsh-plugin topic，按清单可安装性过滤，用现代卡片网格重新编排 DSH 插件。">
+  <link rel="icon" href="./assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./assets/style.css">
+</head>
+<body>
+  <a class="skip-link" href="#main" data-i18n="a11y.skip">跳到主要内容</a>
+
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="brand" href="./" aria-label="DSH Plugin Radar">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 32 32" role="img" focusable="false">
+            <circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-opacity=".28" stroke-width="1.5"/>
+            <circle cx="16" cy="16" r="8" fill="none" stroke="currentColor" stroke-opacity=".45" stroke-width="1.5"/>
+            <circle cx="16" cy="16" r="2.6" fill="currentColor"/>
+            <path d="M16 16 26.5 7.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+        </span>
+        <span class="brand-text">DSH Plugin Radar</span>
+      </a>
+      <nav class="header-actions" aria-label="Site">
+        <a id="repo-link" class="ghost-link" href="https://github.com/krutziy/dsh-pl-radar" target="_blank" rel="noopener noreferrer">
+          <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
+          <span class="ghost-link-text">GitHub</span>
+        </a>
+        <button id="lang-toggle" class="icon-button lang-button" type="button" aria-label="Switch language">EN</button>
+        <button id="theme-toggle" class="icon-button" type="button" aria-label="Switch theme">
+          <svg class="icon-sun" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9 7 7M17 17l2.1 2.1M19.1 4.9 17 7M7 17l-2.1 2.1" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          <svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20 15.2A8.2 8.2 0 0 1 8.8 4 8.5 8.5 0 1 0 20 15.2Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+        </button>
+        <button id="settings-button" class="icon-button" type="button" aria-label="Settings">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-1.42 1.42-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.03 1.56V20h-2v-.48A1.7 1.7 0 0 0 11.3 18a1.7 1.7 0 0 0-1.88.34l-.06.06-1.42-1.42.06-.06A1.7 1.7 0 0 0 8.34 15 1.7 1.7 0 0 0 6.78 14H6.3v-2h.48A1.7 1.7 0 0 0 8.34 11a1.7 1.7 0 0 0-.34-1.88l-.06-.06 1.42-1.42.06.06A1.7 1.7 0 0 0 11.3 8a1.7 1.7 0 0 0 1.03-1.56V6h2v.44A1.7 1.7 0 0 0 15.36 8a1.7 1.7 0 0 0 1.88-.34l.06-.06 1.42 1.42-.06.06A1.7 1.7 0 0 0 18.32 11a1.7 1.7 0 0 0 1.56 1.03h.48v2h-.48A1.7 1.7 0 0 0 19.4 15Z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <p class="eyebrow" data-i18n="app.eyebrow">DSH PLUGIN TOPIC RADAR</p>
+        <h1 id="hero-title" data-i18n="app.title">DSH 插件雷达</h1>
+        <p class="lede" data-i18n="app.subtitle">不再一行一个项目。按多个 GitHub 排序窗口实时抓取 dsh-plugin topic，校验清单可安装性，再用卡片网格重新编排。</p>
+        <div class="hero-links">
+          <a id="topic-link" class="hero-link" href="https://github.com/topics/dsh-plugin" target="_blank" rel="noopener noreferrer">
+            <span data-i18n="app.topicLink">查看 GitHub topic</span>
+            <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M6 3h7v7M13 3 4 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </a>
+          <a id="repo-link-2" class="hero-link" href="https://github.com/krutziy/dsh-pl-radar" target="_blank" rel="noopener noreferrer">
+            <span data-i18n="app.repoLink">模板仓库</span>
+            <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M6 3h7v7M13 3 4 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </a>
+        </div>
+      </div>
+      <div id="stats" class="stats" aria-label="Stats">
+        <div class="stat">
+          <span class="stat-label" data-i18n="stats.topicTotal">Topic 总数</span>
+          <strong class="stat-value" id="stat-total">—</strong>
+        </div>
+        <div class="stat">
+          <span class="stat-label" data-i18n="stats.loaded">已加载</span>
+          <strong class="stat-value" id="stat-loaded">—</strong>
+        </div>
+        <div class="stat">
+          <span class="stat-label" data-i18n="stats.verified">清单可安装</span>
+          <strong class="stat-value" id="stat-verified">—</strong>
+        </div>
+        <div class="stat">
+          <span class="stat-label" data-i18n="stats.updated">最后抓取</span>
+          <strong class="stat-value stat-small" id="stat-updated">—</strong>
+        </div>
+      </div>
+    </section>
+
+    <section class="control-bar" aria-label="Search and filters">
+      <div class="search-wrap">
+        <svg class="search-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="m16.2 16.2 4.3 4.3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        <label class="visually-hidden" for="search-input" data-i18n="search.label">搜索插件</label>
+        <input id="search-input" type="search" autocomplete="off" spellcheck="false" placeholder="搜索插件、作者、关键词……" data-i18n-placeholder="search.placeholder">
+        <kbd aria-hidden="true">/</kbd>
+      </div>
+
+      <label class="select-wrap">
+        <span class="visually-hidden" data-i18n="sort.label">排序</span>
+        <select id="sort-select">
+          <option value="recommended" data-i18n="sort.recommended">推荐</option>
+          <option value="stars" data-i18n="sort.stars">Star 最多</option>
+          <option value="updated" data-i18n="sort.updated">最近更新</option>
+          <option value="newest" data-i18n="sort.newest">最新创建</option>
+          <option value="name" data-i18n="sort.name">名称</option>
+        </select>
+      </label>
+
+      <label class="switch" for="verified-toggle">
+        <input id="verified-toggle" type="checkbox" checked>
+        <span class="switch-track" aria-hidden="true"><span class="switch-dot"></span></span>
+        <span class="switch-label" data-i18n="filter.verifiedOnly">只看清单可安装</span>
+      </label>
+
+      <button id="filter-button" class="button button-quiet filter-button" type="button" aria-expanded="false" aria-controls="filters">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 6h16M7 12h10M10 18h4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        <span data-i18n="filter.title">筛选</span>
+        <span class="filter-count" id="filter-count" hidden>0</span>
+      </button>
+
+      <button id="refresh-button" class="button button-accent" type="button">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20 11a8 8 0 1 0-2.3 6.7M20 4v7h-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span data-i18n="actions.refresh">刷新</span>
+      </button>
+    </section>
+
+    <div class="status-row">
+      <div id="status-text" class="status-text" role="status" aria-live="polite">准备加载……</div>
+      <button id="progress-toggle" class="link-button" type="button" aria-expanded="false" aria-controls="progress-panel" data-i18n="progress.toggle">抓取详情</button>
+    </div>
+
+    <div id="error-banner" class="error-banner" hidden role="alert">
+      <div class="error-copy">
+        <strong id="error-title"></strong>
+        <p id="error-body"></p>
+      </div>
+      <button id="error-retry" class="button button-quiet" type="button" data-i18n="actions.retry">重试</button>
+    </div>
+
+    <section id="progress-panel" class="progress-panel" hidden aria-label="Fetch progress">
+      <div id="window-list" class="window-list"></div>
+      <div class="progress-foot">
+        <span id="verify-line"></span>
+        <span id="rate-line"></span>
+        <span id="cache-line"></span>
+      </div>
+    </section>
+
+    <div class="layout">
+      <aside id="filters" class="filters" aria-label="Filters">
+        <div class="filters-head">
+          <h2 data-i18n="filter.title">筛选</h2>
+          <button id="filters-close" class="icon-button filters-close" type="button" aria-label="Close filters">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m6 6 12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+
+        <div class="filter-group">
+          <h3 data-i18n="filter.category">分类</h3>
+          <div id="category-list" class="category-list"></div>
+        </div>
+
+        <div class="filter-group">
+          <label for="language-select" data-i18n="filter.language">语言</label>
+          <select id="language-select"></select>
+        </div>
+
+        <div class="filter-group">
+          <label for="license-select" data-i18n="filter.license">许可证</label>
+          <select id="license-select"></select>
+        </div>
+
+        <div class="filter-group">
+          <label for="days-select" data-i18n="filter.days">更新时间</label>
+          <select id="days-select">
+            <option value="0" data-i18n="filter.daysAny">不限</option>
+            <option value="7" data-i18n="filter.days7">近 7 天</option>
+            <option value="30" data-i18n="filter.days30">近 30 天</option>
+            <option value="90" data-i18n="filter.days90">近 90 天</option>
+          </select>
+        </div>
+
+        <label class="check-row" for="archived-toggle">
+          <input id="archived-toggle" type="checkbox">
+          <span data-i18n="filter.showArchived">显示已归档</span>
+        </label>
+
+        <button id="clear-filters" class="button button-quiet button-full" type="button" data-i18n="filter.clear">清除筛选</button>
+      </aside>
+
+      <section class="results" aria-label="Results">
+        <div id="active-filters" class="active-filters"></div>
+        <div id="grid" class="plugin-grid"></div>
+        <div id="empty-state" class="empty-state" hidden>
+          <div class="empty-mark" aria-hidden="true">
+            <svg viewBox="0 0 64 64" focusable="false"><circle cx="32" cy="32" r="24" fill="none" stroke="currentColor" stroke-opacity=".25" stroke-width="2"/><circle cx="32" cy="32" r="12" fill="none" stroke="currentColor" stroke-opacity=".45" stroke-width="2"/><circle cx="32" cy="32" r="3" fill="currentColor"/><path d="M32 32 49 17" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+          </div>
+          <h2 id="empty-title" data-i18n="status.empty">没有匹配的插件</h2>
+          <p id="empty-hint" data-i18n="status.emptyHint">试试清除筛选，或者关闭“只看清单可安装”。</p>
+          <button id="empty-clear" class="button button-accent" type="button" data-i18n="filter.clear">清除筛选</button>
+        </div>
+        <div id="loading-more" class="loading-more" hidden>
+          <span class="spinner" aria-hidden="true"></span>
+          <span data-i18n="status.fetchingMore">正在抓取更多…</span>
+        </div>
+        <div id="sentinel" class="sentinel" aria-hidden="true"></div>
+        <div class="load-more-wrap">
+          <button id="load-more" class="button button-quiet" type="button" data-i18n="actions.loadMore">加载更多</button>
+          <p id="end-note" class="end-note" hidden data-i18n="status.end">已经到底了。</p>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <p data-i18n="footer.disclaimer">本页只是发现工具，不是安全审计。安装插件会以你的权限执行第三方代码，请先检查源码。</p>
+      <p>
+        <span data-i18n="footer.dataSource">数据来自 GitHub Search API 与仓库 package.json；页面无后端、无统计。</span>
+        <a id="footer-repo" href="https://github.com/krutziy/dsh-pl-radar" target="_blank" rel="noopener noreferrer" data-i18n="footer.template">模板仓库</a>
+      </p>
+      <p class="footer-meta">Not affiliated with GitHub or DeepSeek. <span id="footer-updated"></span></p>
+    </div>
+  </footer>
+
+  <dialog id="detail-dialog" class="dialog detail-dialog" aria-labelledby="detail-title">
+    <div id="detail-content"></div>
+  </dialog>
+
+  <dialog id="settings-dialog" class="dialog settings-dialog" aria-labelledby="settings-title">
+    <div class="dialog-head">
+      <h2 id="settings-title" data-i18n="settings.title">设置</h2>
+      <button id="settings-close" class="icon-button" type="button" aria-label="Close settings">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m6 6 12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <section class="settings-section">
+      <h3 data-i18n="settings.tokenTitle">GitHub Token（可选）</h3>
+      <p class="muted" data-i18n="settings.tokenDesc">不填也能用。填入后搜索配额从 10 次/分钟提升到 30 次/分钟。只保存在本次浏览器会话，只发送给 api.github.com。</p>
+      <div class="token-row">
+        <input id="token-input" type="password" autocomplete="off" spellcheck="false" placeholder="github_pat_… 或 ghp_…" aria-label="GitHub Token">
+        <button id="save-token" class="button button-accent" type="button" data-i18n="settings.saveToken">保存</button>
+        <button id="clear-token" class="button button-quiet" type="button" data-i18n="settings.clearToken">清除</button>
+      </div>
+      <p id="token-status" class="muted token-status"></p>
+    </section>
+    <section class="settings-section">
+      <h3 data-i18n="settings.cacheTitle">本地缓存</h3>
+      <p class="muted" data-i18n="settings.cacheDesc">数据缓存在 IndexedDB，默认 6 小时。清除后会重新从 GitHub 抓取。</p>
+      <button id="clear-cache" class="button button-danger" type="button" data-i18n="settings.clearCache">清空缓存并重新抓取</button>
+    </section>
+    <section class="settings-section">
+      <h3 data-i18n="settings.rateTitle">当前配额</h3>
+      <p id="settings-rate" class="muted">—</p>
+    </section>
+  </dialog>
+
+  <template id="card-template">
+    <article class="plugin-card">
+      <div class="card-head">
+        <div class="avatar" data-avatar></div>
+        <div class="card-title-wrap">
+          <button class="card-title" type="button" data-action="details"></button>
+          <span class="card-owner" data-owner></span>
+        </div>
+        <span class="badge" data-badge></span>
+      </div>
+      <p class="card-desc" data-desc></p>
+      <div class="card-meta">
+        <span class="meta-item" data-stars></span>
+        <span class="meta-item" data-updated></span>
+        <span class="meta-item" data-language></span>
+      </div>
+      <div class="card-foot">
+        <span class="category-chip" data-category></span>
+        <div class="card-actions">
+          <button class="icon-button card-copy" type="button" data-action="copy" title="Copy install command">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="8" y="8" width="11" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" fill="none" stroke="currentColor" stroke-width="1.7"/></svg>
+          </button>
+          <button class="text-button" type="button" data-action="details" data-i18n="actions.details">详情</button>
+        </div>
+      </div>
+    </article>
+  </template>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script type="module" src="./assets/app.js"></script>
+</body>
+</html>
